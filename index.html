@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <!-- Vista responsive -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jinn Clicker</title>
+  <style>
+    /* ===== ESTILOS GENERALES ===== */
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #fff;
+      color: #333;
+      position: relative;
+      overflow-x: hidden;
+    }
+    /* Información de Versión */
+    #version-info {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 14px;
+      color: #666;
+      z-index: 150;
+    }
+    /* Contenedor central para clicker y contador centrado en pantalla */
+    #main-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    /* ===== CLICKER PRINCIPAL ===== */
+    button#clicker {
+      background-color: transparent;
+      border: none;
+      padding: 0;
+      outline: none;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    .scale-container {
+      position: relative;
+      display: inline-block;
+      transition: transform 0.3s ease;
+    }
+    .clicker-img {
+      width: 150px;
+      height: 150px;
+      background-image: url('Jinn.png'); /* Imagen principal del clicker */
+      background-size: cover;
+      background-position: center;
+      animation: rotate 20s linear infinite;
+    }
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .clicked {
+      transform: scale(1.2);
+    }
+    #contador {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+    /* ===== BOTONES LATERALES ===== */
+    #side-buttons {
+      position: fixed;
+      right: 20px;
+      top: 15%;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      z-index: 10;
+    }
+    #side-buttons button {
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      padding: 10px 15px;
+      font-size: 18px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      margin-bottom: 10px;
+    }
+    #side-buttons button:hover {
+      background-color: #45a049;
+    }
+    /* ===== PANELES ===== */
+    .panel {
+      position: fixed;
+      top: 0;
+      width: 320px;
+      height: 100%;
+      background-color: #fff;
+      color: #333;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      padding: 20px;
+      overflow-y: auto;
+      z-index: 20;
+      transition: transform 0.3s ease;
+    }
+    /* Paneles a la derecha */
+    #menu-mejoras, #menu-logros {
+      right: 0;
+      transform: translateX(100%);
+    }
+    #menu-mejoras.open, #menu-logros.open {
+      transform: translateX(0);
+    }
+    /* Paneles a la izquierda */
+    #menu-config, #menu-tienda, #menu-sound-notifications, #menu-sound-achievements {
+      left: 0;
+      transform: translateX(-100%);
+    }
+    #menu-config.open, #menu-tienda.open, #menu-sound-notifications.open, #menu-sound-achievements.open {
+      transform: translateX(0);
+    }
+    /* Botón para cerrar panel */
+    .close-panel {
+      background-color: transparent;
+      border: none;
+      font-size: 24px;
+      float: right;
+      cursor: pointer;
+    }
+    /* ===== CONTENEDOR DE NOTIFICACIONES ===== */
+    #notification-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 100;
+    }
+    .notification {
+      padding: 10px 15px;
+      margin-top: 10px;
+      border-radius: 5px;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: slideUp 2s forwards;
+    }
+    @keyframes slideUp {
+      0% { opacity: 0; transform: translateY(20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+    /* ===== CONTENEDOR DE TIPS (fijo debajo del contador) ===== */
+    #tip-container {
+      position: fixed;
+      top: 75%; /* Aproximadamente 25% debajo del centro */
+      left: 50%;
+      transform: translate(-50%, 0);
+      z-index: 50;
+    }
+    .tip {
+      padding: 10px 15px;
+      border-radius: 5px;
+      margin-bottom: 5px;
+      animation: tipAnim 10s forwards;
+    }
+    @keyframes tipAnim {
+      0% { opacity: 0; transform: translateY(20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+    /* ===== CONTENEDOR DE EFECTOS ===== */
+    #effects-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      max-width: 150px;
+      z-index: 40;
+    }
+    #effects-container .effect-item {
+      margin: 3px;
+      width: 50px;
+      height: 50px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-size: cover;
+      background-position: center;
+    }
+    /* ===== AUTOCLICKERS VISUALES ===== */
+    .auto-clicker {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background-image: url('Efectos/mouse.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      animation: rotateCookie 5s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes rotateCookie {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    /* ===== MENSAJE GRANDE (para bonus del JinnCookie) ===== */
+    .big-message {
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 72px;
+      padding: 20px;
+      border-radius: 10px;
+      z-index: 200;
+      animation: fadeOut 2s forwards;
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    /* ===== JinnCookie QUE CAE ===== */
+    .falling-jinn {
+      position: fixed;
+      top: -100px;
+      width: 50px;
+      height: 50px;
+      background-image: url('Jinns/JinnCookie.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      animation: fallAnimation 10s linear forwards, rotateCookie 10s linear infinite;
+      cursor: pointer;
+      z-index: 30;
+    }
+    @keyframes fallAnimation {
+      from { top: -100px; }
+      to { top: 110%; }
+    }
+    /* ===== BOTONES DE SELECCIÓN DE FONDO (como botones) ===== */
+    .bg-option {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: #eee;
+      cursor: pointer;
+      text-align: center;
+    }
+    /* ===== ESTILOS PARA LOGROS (contenedor interno) ===== */
+    .achievement-item {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: #eee;
+    }
+    .achievement-item img {
+      width: 50px;
+      height: 50px;
+      margin-right: 10px;
+    }
+    .achievement-info {
+      text-align: left;
+      width: 100%;
+    }
+    .achievement-item.locked img {
+      filter: brightness(0);
+    }
+    .achievement-item.locked .achievement-info {
+      display: none;
+    }
+    /* ===== CONFIGURACIÓN – SONIDOS Y CÓDIGOS ===== */
+    #config-sonidos, #config-codigos {
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px solid #ccc;
+    }
+    #config-sonidos h3, #config-codigos h3 {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+    }
+    #config-sonidos label, #config-codigos label {
+      margin-right: 5px;
+    }
+    #config-sonidos input[type=range] {
+      width: 100%;
+    }
+    #config-codigos input[type="text"] {
+      width: calc(100% - 100px);
+      padding: 5px;
+      margin-right: 5px;
+    }
+    #config-codigos button {
+      padding: 5px 10px;
+    }
+    /* ===== CONTENEDOR DE GEMAS (esquina inferior izquierda) ===== */
+    #gem-container {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      align-items: center;
+      z-index: 100;
+      background-color: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 5px;
+    }
+    #gem-container img {
+      width: 30px;
+      height: 30px;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Información de Versión -->
+  <div id="version-info">Versión: 1.69.0 (Beta)</div>
+  
+  <!-- CONTENEDOR CENTRAL -->
+  <div id="main-container">
+    <!-- CLICKER PRINCIPAL -->
+    <button id="clicker">
+      <div class="scale-container">
+        <div class="clicker-img"></div>
+      </div>
+    </button>
+    <div id="contador">0</div>
+  </div>
+  
+  <!-- CONTENEDOR DE TIPS (debajo del contador) -->
+  <div id="tip-container"></div>
+  
+  <!-- CONTENEDOR DE AUTOCLICKERS VISUALES -->
+  <div id="autoClickersContainer"></div>
+  
+  <!-- BOTONES LATERALES -->
+  <div id="side-buttons">
+    <button id="tienda">Tienda</button>
+    <button id="mejoras">Mejoras</button>
+    <button id="inventario">Inventario</button>
+    <button id="logros">Logros</button>
+    <button id="configuracion">Configuración</button>
+  </div>
+  
+  <!-- PANEL DE MEJORAS -->
+  <div id="menu-mejoras" class="panel">
+    <button id="cerrar-menu" class="close-panel">&times;</button>
+    <h2>Mejoras</h2>
+    <!-- Multiplicador -->
+    <div id="upgrade-section">
+      <h3>Multiplicador</h3>
+      <p id="upgrade-cost">Costo: 10 clicks [Nivel x1]</p>
+      <button id="upgrade-button">Comprar</button>
+      <p id="upgrade-status"></p>
+    </div>
+    <!-- AutoClicker -->
+    <div id="autoclicker-section">
+      <h3>AutoClicker</h3>
+      <img src="Mejoras/autoclick.png" alt="AutoClicker" style="width:50px;height:50px;vertical-align:middle;margin-right:10px;">
+      <p id="autoclicker-cost">Costo: 50 clicks [Nivel x0]</p>
+      <button id="autoclicker-button">Comprar</button>
+      <p id="autoclicker-status"></p>
+    </div>
+  </div>
+  
+  <!-- PANEL DE LOGROS -->
+  <div id="menu-logros" class="panel">
+    <button id="cerrar-logros" class="close-panel">&times;</button>
+    <h2>Logros</h2>
+    <div id="logros-container">
+      <!-- Se mostrarán logros en contenedores: imagen a la izquierda y, si desbloqueado, info a la derecha -->
+    </div>
+  </div>
+  
+  <!-- PANEL DE CONFIGURACIÓN -->
+  <div id="menu-config" class="panel">
+    <button id="cerrar-config" class="close-panel">&times;</button>
+    <h2>Configuración</h2>
+    <!-- Botones para seleccionar fondo -->
+    <button class="bg-option" data-bg="blanco">Fondo Blanco</button>
+    <button class="bg-option" data-bg="negro">Fondo Negro</button>
+    <!-- Sección de selección de sonidos -->
+    <div id="config-sonidos">
+      <h3>Sonidos</h3>
+      <div>
+        <label for="vol-notif">Vol. Notificaciones:</label>
+        <input type="range" id="vol-notif" min="0" max="1" step="0.1" value="1">
+      </div>
+      <div>
+        <label for="vol-music">Vol. Música:</label>
+        <input type="range" id="vol-music" min="0" max="1" step="0.1" value="1">
+      </div>
+      <!-- Botones para elegir sonidos personalizados -->
+      <button id="btn-sound-notifications">Elegir Sonido de Notificaciones</button>
+      <button id="btn-sound-achievements">Elegir Sonido de Logros</button>
+    </div>
+    <!-- Sección de Códigos -->
+    <div id="config-codigos">
+      <h3>Códigos</h3>
+      <input type="text" id="code-input" placeholder="Introduce tu código">
+      <button id="apply-code">Aplicar</button>
+    </div>
+  </div>
+  
+  <!-- PANEL DE TIENDA -->
+  <div id="menu-tienda" class="panel">
+    <button id="cerrar-tienda" class="close-panel">&times;</button>
+    <h2>Tienda</h2>
+    <p>Aquí se implementarán futuras opciones de la tienda.</p>
+  </div>
+  
+  <!-- PANEL DE SONIDOS - NOTIFICACIONES -->
+  <div id="menu-sound-notifications" class="panel">
+    <button id="cerrar-sound-notifications" class="close-panel">&times;</button>
+    <h2>Sonidos de Notificaciones</h2>
+    <button class="sound-option" data-sound="Sonidos/Notificaciones/notif1.mp3">Discord Mensaje</button>
+    <button class="sound-option" data-sound="Sonidos/Notificaciones/notif2.mp3">Brillitos "No se de que es"</button>
+  </div>
+  
+  <!-- PANEL DE SONIDOS - LOGROS -->
+  <div id="menu-sound-achievements" class="panel">
+    <button id="cerrar-sound-achievements" class="close-panel">&times;</button>
+    <h2>Sonidos de Logros</h2>
+    <button class="sound-option" data-sound="Sonidos/Logros/logro1.mp3">Pokémon</button>
+    <button class="sound-option" data-sound="Sonidos/Logros/logro2.mp3">Xbox logro de Diamante</button>
+  </div>
+  
+  <!-- CONTENEDOR DE EFECTOS (cuadraditos en esquina inferior derecha) -->
+  <div id="effects-container"></div>
+  
+  <!-- CONTENEDOR DE NOTIFICACIONES -->
+  <div id="notification-container"></div>
+  
+  <!-- CONTENEDOR DE GEMAS (esquina inferior izquierda) -->
+  <div id="gem-container">
+    <img src="Jinns/JinnGem.png" alt="Jinn Gem">
+    <span id="gem-counter">0</span>
+  </div>
+  
+  <!-- Elemento de música (oculto) -->
+  <audio id="music" src="Sonidos/Juego/music.mp3" preload="auto" loop></audio>
+  
+  <!-- AUDIO ELEMENTOS -->
+  <audio id="click-sound" src="click.mp3" preload="auto"></audio>
+  <audio id="notif-sound" src="Sonidos/Notificaciones/notif1.mp3" preload="auto"></audio>
+  <audio id="ach-sound" src="Sonidos/Logros/logro1.mp3" preload="auto"></audio>
+  
+  <script>
+    window.onload = function() {
+      /***** VARIABLES DEL JUEGO *****/
+      let contador = 0;
+      let clickMultiplier = 1; // Interno (con decimales, no se muestran)
+      let upgradeCost = 10;
+      let upgradeCount = 0;
+      let autoClickCost = 50;
+      let autoClickCount = 0;
+      let boostMultiplier = 1; // Sin boost por defecto
+      let isDarkMode = false;  // Modo oscuro
+      let jinnGems = 0;       // Contador de JinnGems
+      let musicStarted = false; // Bandera para iniciar la música en la primera interacción
+
+      // Guardar el tiempo de inicio para los logros de 1 y 10 minutos
+      const sessionStart = Date.now();
+
+      // Sonidos seleccionados (valor inicial)
+      let notificationSound = "Sonidos/Notificaciones/notif1.mp3";
+      let achievementSound = "Sonidos/Logros/logro1.mp3";
+
+      // Lista de logros
+      const achievements = [
+        {
+          id: "ach-100-clicks",
+          title: "¡100 Clicks!",
+          description: "¡Haz 100 Clicks!",
+          condition: () => contador >= 100,
+          unlocked: false,
+          icon: "Logros/ach100.png"
+        },
+        {
+          id: "ach-1000-clicks",
+          title: "¡1000 Clicks!",
+          description: "¡Haz 1000 Clicks!",
+          condition: () => contador >= 1000,
+          unlocked: false,
+          icon: "Logros/ach101.png"
+        },
+        {
+          id: "ach-1-minute",
+          title: "¡1 Minuto!",
+          description: "Has pasado 1 minuto jugando.",
+          condition: () => Date.now() - sessionStart >= 60000,
+          unlocked: false,
+          icon: "Logros/ach1minute.png"
+        },
+        {
+          id: "ach-10-minute",
+          title: "¡10 Minutos!",
+          description: "Has pasado 10 minutos jugando.",
+          condition: () => Date.now() - sessionStart >= 600000,
+          unlocked: false,
+          icon: "Logros/ach10minute.png"
+        }
+      ];
+      
+      // Lista de efectos activos
+      let activeEffects = []; // Cada efecto: { id, name, description, duration, startTime, icon }
+      
+      // Función para agregar efecto activo
+      function addEffect(effect) {
+        activeEffects = activeEffects.filter(e => e.id !== effect.id);
+        effect.startTime = Date.now();
+        activeEffects.push(effect);
+        updateEffectsDisplay();
+      }
+      
+      // Actualiza efectos cada segundo
+      function tickEffects() {
+        const now = Date.now();
+        activeEffects = activeEffects.filter(effect => {
+          const elapsed = (now - effect.startTime) / 1000;
+          return elapsed < effect.duration;
+        });
+        updateEffectsDisplay();
+      }
+      setInterval(tickEffects, 1000);
+      
+      // Actualiza el contenedor de efectos
+      function updateEffectsDisplay() {
+        const container = document.getElementById('effects-container');
+        container.innerHTML = "";
+        activeEffects.forEach(effect => {
+          const remaining = Math.max(0, Math.ceil(effect.duration - ((Date.now() - effect.startTime) / 1000)));
+          const effDiv = document.createElement('div');
+          effDiv.className = 'effect-item';
+          effDiv.style.backgroundImage = `url('${effect.icon}')`;
+          effDiv.setAttribute('data-description', `${effect.name}: ${effect.description} (${remaining}s)`);
+          container.appendChild(effDiv);
+        });
+      }
+      
+      /***** ELEMENTOS DEL DOM *****/
+      const botonClicker = document.getElementById('clicker');
+      const display = document.getElementById('contador');
+      const scaleContainer = document.querySelector('.scale-container');
+      const clickSound = document.getElementById('click-sound');
+      const notifSoundAudio = document.getElementById('notif-sound');
+      const achSoundAudio = document.getElementById('ach-sound');
+      const musicAudio = document.getElementById('music');
+      const gemCounter = document.getElementById('gem-counter');
+      
+      /***** FUNCIONES AUXILIARES *****/
+      function updateContador() {
+        display.textContent = Math.floor(contador);
+      }
+      
+      function updateGemCounter() {
+        gemCounter.textContent = jinnGems;
+      }
+      
+      function playNotificationSound() {
+        notifSoundAudio.src = notificationSound;
+        notifSoundAudio.currentTime = 0;
+        notifSoundAudio.play().catch(e => console.log("Error reproducir notificación:", e));
+      }
+      
+      function playAchievementSound() {
+        achSoundAudio.src = achievementSound;
+        achSoundAudio.currentTime = 0;
+        achSoundAudio.play().catch(e => console.log("Error reproducir logro:", e));
+      }
+      
+      function showNotification(message) {
+        playNotificationSound();
+        const container = document.getElementById('notification-container');
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        if(isDarkMode) {
+          notification.style.backgroundColor = "rgba(255,255,255,0.8)";
+          notification.style.color = "#000";
+        } else {
+          notification.style.backgroundColor = "rgba(0,0,0,0.8)";
+          notification.style.color = "#fff";
+        }
+        notification.innerHTML = message;
+        container.appendChild(notification);
+        setTimeout(() => { notification.remove(); }, 2100);
+      }
+      
+      function showAchievementNotification(achievement) {
+        playAchievementSound();
+        const container = document.getElementById('notification-container');
+        const notif = document.createElement('div');
+        notif.className = 'notification';
+        if(isDarkMode) {
+          notif.style.backgroundColor = "rgba(255,255,255,0.8)";
+          notif.style.color = "#000";
+        } else {
+          notif.style.backgroundColor = "rgba(0,0,0,0.8)";
+          notif.style.color = "#fff";
+        }
+        notif.innerHTML = `<img src="${achievement.icon}" style="width:40px;height:40px;vertical-align:middle;margin-right:10px;"> ${achievement.title}`;
+        container.appendChild(notif);
+        setTimeout(() => { notif.remove(); }, 2100);
+      }
+      
+      // Mostrar los tips en el contenedor #tip-container
+      function showTip(message) {
+        const tipContainer = document.getElementById('tip-container');
+        if (!tipContainer) return;
+        const tip = document.createElement('div');
+        tip.className = 'tip';
+        if(isDarkMode) {
+          tip.style.backgroundColor = "rgba(255,255,255,0.8)";
+          tip.style.color = "#000";
+        } else {
+          tip.style.backgroundColor = "rgba(0,0,0,0.8)";
+          tip.style.color = "#fff";
+        }
+        tip.textContent = message;
+        tipContainer.appendChild(tip);
+        setTimeout(() => { tip.remove(); }, 10000);
+      }
+      
+      const tips = [
+        "El mejor juego que hayas visto! (Sarcasmo)",
+        "Ojalá a todo esto tengas una vida",
+        "Recuerda: cada click cuenta",
+        "¡Mejora tus habilidades con cada click!",
+        "El click es la moneda principal.",
+        "Guest es wekito.",
+        "¡Diviértete cliqueando un icono sobre mí!",
+        "También hay JinnGems! (Ni yo se que es)",
+        "Fortnite nunca te revelará tu contraseña.",
+        "Los Femboys son lo mejor.",
+        "Los tips son cosas raras que salen de mi mente (-Cristian).",
+        "Eh roto como 6 celulares en mi vida (+1 que me cayó en café).",
+        "¡Hay muchos secretos en éste 'Juego', y no son todos fáciles!",
+        "Oye yapo no te aburras.",
+        "When haces tus momos en tips, ¿el futuro es hoy oíste viejo?, but son una mierda, ¡oh!, ¡me tumbaron el juego!."
+      ];
+      function cycleTips() {
+        const tip = tips[Math.floor(Math.random() * tips.length)];
+        showTip(tip);
+      }
+      setInterval(cycleTips, 15000);
+      
+      function checkAchievements() {
+        achievements.forEach(ach => {
+          if (!ach.unlocked && ach.condition()) {
+            ach.unlocked = true;
+            showAchievementNotification(ach);
+            updateAchievementsPanel();
+          }
+        });
+      }
+      
+      // En el panel de logros, cada logro se muestra con contenedor: imagen a la izquierda y la info a la derecha.
+      function updateAchievementsPanel() {
+        const container = document.getElementById('logros-container');
+        container.innerHTML = "";
+        achievements.forEach(ach => {
+          const stateClass = ach.unlocked ? "unlocked" : "locked";
+          const infoHTML = ach.unlocked ? `<div class="achievement-info" ${isDarkMode ? 'style="color:#000;"' : ''}>
+              <strong>${ach.title}</strong><br>
+              <small>${ach.description}</small>
+            </div>` : `<div class="achievement-info"></div>`;
+          const item = document.createElement('div');
+          item.className = 'achievement-item ' + stateClass;
+          item.innerHTML = `<img src="${ach.icon}" alt="Logro">` + infoHTML;
+          container.appendChild(item);
+        });
+      }
+      
+      /***** MECÁNICAS EXTRA: BONUS CON JINNCOOKIE Y EFECTO *****/
+      function applyBoost() {
+        boostMultiplier = 2;
+        addEffect({
+           id: "boost",
+           name: "Boost 2x",
+           description: "Tus clicks se duplican.",
+           duration: 60,
+           icon: "Efectos/boost2x.png"
+        });
+        showNotification("Boost activado: ¡Clicks x2!");
+        setTimeout(() => {
+          boostMultiplier = 1;
+          showNotification("Boost finalizado");
+        }, 60000);
+      }
+      
+      function showBigMessage(message) {
+        const bigMsg = document.createElement('div');
+        bigMsg.className = 'big-message';
+        bigMsg.textContent = message;
+        document.body.appendChild(bigMsg);
+        setTimeout(() => { bigMsg.remove(); }, 2100);
+      }
+      
+      function spawnJinnCookie() {
+        const chance = 0.05; // 5% de probabilidad
+        if (Math.random() < chance) {
+          const jinn = document.createElement('div');
+          jinn.className = 'falling-jinn';
+          const leftPos = Math.random() * (window.innerWidth - 50);
+          jinn.style.left = leftPos + "px";
+          document.body.appendChild(jinn);
+          jinn.addEventListener('click', () => {
+            contador += 1000;
+            updateContador();
+            showBigMessage("x1000 Clicks!");
+            applyBoost();
+            jinn.remove();
+          });
+          setTimeout(() => { if(jinn.parentElement) jinn.remove(); }, 10000);
+        }
+      }
+      setInterval(spawnJinnCookie, 15000);
+      
+      /***** AUTOCLICKERS VISUALES *****/
+      function updateAutoClickersPositions() {
+        const container = document.getElementById('autoClickersContainer');
+        container.innerHTML = "";
+        const clickerRect = scaleContainer.getBoundingClientRect();
+        const centerX = clickerRect.left + clickerRect.width / 2;
+        const centerY = clickerRect.top + clickerRect.height / 2;
+        const perCircle = 6;
+        for (let i = 0; i < autoClickCount; i++) {
+          const circleIndex = Math.floor(i / perCircle);
+          const indexInCircle = i % perCircle;
+          const radius = 80 + circleIndex * 40;
+          const angle = (2 * Math.PI / perCircle) * indexInCircle;
+          const x = centerX + radius * Math.cos(angle) - 20;
+          const y = centerY + radius * Math.sin(angle) - 20;
+          const autoIcon = document.createElement('div');
+          autoIcon.className = 'auto-clicker';
+          autoIcon.style.left = x + "px";
+          autoIcon.style.top = y + "px";
+          container.appendChild(autoIcon);
+        }
+      }
+      
+      /***** EVENTO DEL CLICKER PRINCIPAL *****/
+      botonClicker.addEventListener('click', () => {
+        // Iniciar música si aún no se ha iniciado (por interacción)
+        if (!musicStarted) {
+          musicAudio.play().catch(e => console.log("Error al reproducir música:", e));
+          musicStarted = true;
+        }
+        contador += clickMultiplier * boostMultiplier;
+        updateContador();
+        scaleContainer.classList.add('clicked');
+        clickSound.currentTime = 0;
+        clickSound.play().catch(e => console.log("Error al reproducir click:", e));
+        setTimeout(() => { scaleContainer.classList.remove('clicked'); }, 1000);
+        checkAchievements();
+      });
+      
+      /***** PANEL DE MEJORAS *****/
+      const botonMejoras = document.getElementById('mejoras');
+      const menuMejoras = document.getElementById('menu-mejoras');
+      const cerrarMenu = document.getElementById('cerrar-menu');
+      botonMejoras.addEventListener('click', () => { menuMejoras.classList.add('open'); });
+      cerrarMenu.addEventListener('click', () => { menuMejoras.classList.remove('open'); });
+      
+      // Mejorar multiplicador
+      const upgradeButton = document.getElementById('upgrade-button');
+      const upgradeCostDisplay = document.getElementById('upgrade-cost');
+      const upgradeStatusDisplay = document.getElementById('upgrade-status');
+      upgradeButton.addEventListener('click', () => {
+        if (contador >= upgradeCost) {
+          contador -= upgradeCost;
+          clickMultiplier = Math.round(clickMultiplier * 1.5 * 10) / 10;
+          upgradeCount++;
+          upgradeCost = Math.floor(upgradeCost * 1.975);
+          updateContador();
+          upgradeCostDisplay.textContent = "Costo: " + upgradeCost + " clicks [Nivel x" + (upgradeCount + 1) + "]";
+          upgradeStatusDisplay.textContent = "Comprado";
+          showNotification("Multiplicador comprado! Nivel x" + (upgradeCount + 1));
+        } else {
+          showNotification("No tienes suficientes clicks para comprar esta mejora.");
+          upgradeStatusDisplay.textContent = "Sin fondos";
+        }
+      });
+      
+      // AutoClicker
+      const autoclickerButton = document.getElementById('autoclicker-button');
+      const autoclickerCostDisplay = document.getElementById('autoclicker-cost');
+      const autoclickerStatusDisplay = document.getElementById('autoclicker-status');
+      autoclickerButton.addEventListener('click', () => {
+        if (contador >= autoClickCost) {
+          contador -= autoClickCost;
+          autoClickCount++;
+          autoClickCost = Math.floor(autoClickCost * 2);
+          updateContador();
+          autoclickerCostDisplay.textContent = "Costo: " + autoClickCost + " clicks [Nivel x" + autoClickCount + "]";
+          autoclickerStatusDisplay.textContent = "Comprado";
+          showNotification("AutoClicker comprado! Nivel x" + autoClickCount);
+          updateAutoClickersPositions();
+        } else {
+          showNotification("No tienes suficientes clicks para comprar AutoClicker.");
+          autoclickerStatusDisplay.textContent = "Sin fondos";
+        }
+      });
+      setInterval(() => {
+        if (autoClickCount > 0) {
+          contador += autoClickCount * clickMultiplier * boostMultiplier;
+          updateContador();
+          checkAchievements();
+        }
+      }, 5000);
+      
+      /***** PANEL DE LOGROS *****/
+      const botonLogros = document.getElementById('logros');
+      const menuLogros = document.getElementById('menu-logros');
+      const cerrarLogros = document.getElementById('cerrar-logros');
+      botonLogros.addEventListener('click', () => { menuLogros.classList.add('open'); updateAchievementsPanel(); });
+      cerrarLogros.addEventListener('click', () => { menuLogros.classList.remove('open'); });
+      updateAchievementsPanel();
+      
+      /***** PANEL DE CONFIGURACIÓN *****/
+      const botonConfig = document.getElementById('configuracion');
+      const menuConfig = document.getElementById('menu-config');
+      const cerrarConfig = document.getElementById('cerrar-config');
+      botonConfig.addEventListener('click', () => { menuConfig.classList.add('open'); });
+      cerrarConfig.addEventListener('click', () => { menuConfig.classList.remove('open'); });
+      document.querySelectorAll('.bg-option').forEach(option => {
+        option.addEventListener('click', () => {
+          const bg = option.getAttribute('data-bg');
+          if(bg === "blanco") {
+            isDarkMode = false;
+            document.body.style.backgroundColor = "#fff";
+            document.body.style.color = "#333";
+            document.querySelectorAll('.panel').forEach(el => {
+              el.style.backgroundColor = "#fff";
+              el.style.color = "#333";
+            });
+          } else if(bg === "negro") {
+            isDarkMode = true;
+            document.body.style.backgroundColor = "#000";
+            document.body.style.color = "#fff";
+            document.querySelectorAll('.panel').forEach(el => {
+              el.style.backgroundColor = "#222";
+              el.style.color = "#fff";
+            });
+          }
+          updateAchievementsPanel(); // Actualizar logros para ajustar colores en modo oscuro
+        });
+      });
+      
+      /***** PANEL DE CONFIGURACIÓN – SONIDOS Y CÓDIGOS *****/
+      const volNotif = document.getElementById('vol-notif');
+      const volMusic = document.getElementById('vol-music');
+      // Iniciar música de fondo (se reproducirá tras la primera interacción)
+      musicAudio.volume = volMusic.value;
+      volMusic.addEventListener('input', () => {
+        musicAudio.volume = volMusic.value;
+      });
+      volNotif.addEventListener('input', () => {
+        notifSoundAudio.volume = volNotif.value;
+        achSoundAudio.volume = volNotif.value;
+      });
+      
+      // Códigos
+      const codeInput = document.getElementById('code-input');
+      const applyCodeBtn = document.getElementById('apply-code');
+      applyCodeBtn.addEventListener('click', () => {
+        const code = codeInput.value.trim();
+        if(code === "JinnCoocks") {
+          jinnGems += 10;
+          showNotification("¡Has recibido 10 JinnGems! (Jinn Coocks)");
+        } else if(code === "GuestWeko") {
+          contador += 10000;
+          updateContador();
+          showNotification("¡Has recibido 10,000 Clicks y un beso de el más weko!");
+        } else if(code === "NoraXCamion") {
+          jinnGems += 25;
+          showNotification("Robas una cartera a una tal 'Nora' tras un choque, ¡y recibes 25 JinnGems!");
+        } else if(code === "2x2") {
+          jinnGems += 4;
+          showNotification("¡Has recibido '!4¡' JinnGems!");
+        } else if(code === "TTCMBEA") {
+          jinnGems += 125;
+          showNotification("Has recibido algo de un grupo peculiar...");
+        } else if(code === "Femboys!") {
+          jinnGems += 69;
+          contador += 6969;
+          showNotification("Los femboys son lo mejor. (-Cristian)");
+        } else {
+          showNotification("Código inválido");
+        }
+        codeInput.value = "";
+        updateGemCounter();
+      });
+      
+      /***** PANEL DE TIENDA *****/
+      const botonTienda = document.getElementById('tienda');
+      const menuTienda = document.getElementById('menu-tienda');
+      const cerrarTienda = document.getElementById('cerrar-tienda');
+      botonTienda.addEventListener('click', () => { menuTienda.classList.add('open'); });
+      cerrarTienda.addEventListener('click', () => { menuTienda.classList.remove('open'); });
+      
+      /***** PANEL DE SONIDOS - NOTIFICACIONES *****/
+      const btnSoundNotif = document.getElementById('btn-sound-notifications');
+      const menuSoundNotif = document.getElementById('menu-sound-notifications');
+      const cerrarSoundNotif = document.getElementById('cerrar-sound-notifications');
+      btnSoundNotif.addEventListener('click', () => { menuSoundNotif.classList.add('open'); });
+      cerrarSoundNotif.addEventListener('click', () => { menuSoundNotif.classList.remove('open'); });
+      document.querySelectorAll('#menu-sound-notifications .sound-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+           notificationSound = btn.getAttribute('data-sound');
+           playNotificationSound();
+           menuSoundNotif.classList.remove('open');
+           showNotification("Sonido de notificaciones actualizado");
+        });
+      });
+      
+      /***** PANEL DE SONIDOS - LOGROS *****/
+      const btnSoundAch = document.getElementById('btn-sound-achievements');
+      const menuSoundAch = document.getElementById('menu-sound-achievements');
+      const cerrarSoundAch = document.getElementById('cerrar-sound-achievements');
+      btnSoundAch.addEventListener('click', () => { menuSoundAch.classList.add('open'); });
+      cerrarSoundAch.addEventListener('click', () => { menuSoundAch.classList.remove('open'); });
+      document.querySelectorAll('#menu-sound-achievements .sound-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+           achievementSound = btn.getAttribute('data-sound');
+           playAchievementSound();
+           menuSoundAch.classList.remove('open');
+           showNotification("Sonido de logros actualizado");
+        });
+      });
+      
+      // Iniciar música de fondo (se reproducirá tras la primera interacción)
+      musicAudio.volume = volMusic.value;
+      // Nota: La música se iniciará en el primer clic del usuario (en el botón del clicker)
+    };
+  </script>
+</body>
+</html>
